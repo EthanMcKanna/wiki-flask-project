@@ -6,24 +6,18 @@ import requests
 app = Flask(__name__)
 
 def extract_thumbnail_link(api_url):
-    # Make a request to the Wikipedia API
     response = requests.get(api_url)
     
-    # Check if the request was successful
     if response.status_code == 200:
-        # Parse the JSON response
         data = response.json()
         
-        # Extract the thumbnail link from the JSON data
         try:
             thumbnail_link = data['query']['pages'][0]['thumbnail']['source']
             return thumbnail_link
         except KeyError:
-            # Handle the case where the expected key is not present in the response
             print("Thumbnail link not found in the response.")
             return None
     else:
-        # Handle the case where the request was not successful
         print(f"Error: {response.status_code}")
         return None
 
