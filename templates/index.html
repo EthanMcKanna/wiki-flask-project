@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <form method="POST">
+            <label for="query">Enter something you are curious about:</label><br>
+            <input type="text" id="query" name="query"><br>
+            <input type="submit" value="Submit">
+        </form>
+    </div>
+</body>
+</html>

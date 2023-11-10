@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .image-container {
+            text-align: center; /* Center-align the content within the container */
+        }
+
+        .image-container img {
+            display: inline-block; /* Make the image an inline-block element */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <h2>Here is a summary from Wikipedia:</h2>
+            <div class="image-container">
+                <img src="{{ image_url }}" alt="Wikipedia Image">
+            </div>
+            <p>{{ summary }}</p>
+        </div>
+    </div>
+</body>
+</html>
