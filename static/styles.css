@@ -1,22 +1,4 @@
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f5f5f5;
-    margin: 0;
-    padding: 0;
-}
-
-.container {
-    width: 80%;
-    margin: auto;
-    padding: 20px;
-}
-
-form {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-}
+/* Place any additional CSS styles here, if needed */
 
 input[type="text"] {
     width: 100%;
@@ -42,11 +24,13 @@ input[type="submit"]:hover {
     background-color: #0056b3;
 }
 
-h2 {
-    color: #007BFF;
+.content {
+    overflow: auto;
 }
 
-p {
-    line-height: 1.6;
-    color: #333;
+.image-container {
+    float: left;
+    margin-right: 20px;
+    margin-bottom: 20px;
+    max-width: 50%;
 }
