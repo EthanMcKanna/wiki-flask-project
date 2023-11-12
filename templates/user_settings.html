@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Settings</title>
+    <link rel="stylesheet" type="text/css" href="static/styles.css">
+</head>
+<body>
+    <div>
+        <h1>User Settings</h1>
+        <form method="POST" action="/user/settings">
+            <label for="summary_complexity">Summary Complexity:</label>
+            <select name="summary_complexity" id="summary_complexity">
+                <option value="simple">Simple</option>
+                <option value="detailed">Detailed</option>
+            </select>
+            <input type="submit" value="Save Settings">
+        </form>
+        <a href="/" class="button">Home</a> | <a href="/logout" class="button">Logout</a>
+    </div>
+</body>
+</html>

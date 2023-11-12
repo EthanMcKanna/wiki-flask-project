@@ -1,68 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            width: 80%;
-            margin: auto;
-            padding: 20px;
-        }
-
-        .content {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            overflow: auto; /* To clear the float */
-        }
-
-        .image-container {
-            float: left;
-            margin-right: 20px;
-            margin-bottom: 20px;
-            max-width: 50%;
-        }
-
-        .image-container img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-        }
-
-        h2 {
-            color: #007BFF;
-            font-size: 24px;
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-
-        p {
-            line-height: 1.6;
-            color: #333;
-        }
-    </style>
+    <title>Search Results</title>
+    <link rel="stylesheet" type="text/css" href="static/styles.css">
 </head>
 <body>
-    <div class="container">
-        <div class="content">
-            <div class="image-container">
-                <img src="{{ image_url }}" alt="Wikipedia Image">
-            </div>
-            <h2>{{ query }} Results</h2>
-            <p>{{ ai_summary['advanced'] }}</p>
-            <h2>Simple Summary</h2>
-            <p>{{ ai_summary['basic'] }}</p>
-            <h2>Complete Summary</h2>
-            <p>{{ summary }}</p>
-        </div>
+    <div>
+        <h1>Search Results for {{ query }}</h1>
+        <img src="{{ image_url }}" alt="Image">
+        <h2>Advanced Summary</h2>
+        <p>{{ ai_summary['advanced'] }}</p>
+        <h2>Simple Summary</h2>
+        <p>{{ ai_summary['basic'] }}</p>
+        <h2>Complete Summary</h2>
+        <p>{{ summary }}</p>
+        <h2>Related Articles</h2>
+        <p>{{ related_articles }}</p>
+        
+        {% if current_user.is_authenticated %}
+            <a href="/">New Search</a> | <a href="/user/settings" class="button">Edit Settings</a> | <a href="/logout" class="button">Logout</a>
+        {% else %}
+            <a href="/">New Search</a> | <a href="/login" class="button">Login</a> | <a href="/register" class="button">Register</a>
+        {% endif %}
     </div>
 </body>
 </html>
+
