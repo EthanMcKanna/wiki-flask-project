@@ -2,15 +2,27 @@
 <html>
 <head>
     <title>Login</title>
-    <link rel="stylesheet" type="text/css" href="static/styles.css">
-    <link rel="icon" type="image/png" href="static/images/SiteFavicon.png">
-
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+    <link rel="icon" type="image/png" href="/static/images/SiteFavicon.png">
 </head>
 <body>
-    <div>
+    <div class="topbar">
+        <a href="/">Home</a>
+        {% if current_user.is_authenticated %}
+            <div class="right">
+                <a href="/user/settings">Settings</a>
+                <a href="/logout">Logout</a>
+            </div>
+        {% else %}
+            <a href="/login">Login</a>
+            <a href="/register">Register</a>
+        {% endif %}
+    </div>
+
+    <div style="padding-top:60px; margin:20px;">
         <h1>Login</h1>
         <form method="POST" action="/login">
-            <input type="text" name="username" placeholder="Username" required>
+            <input type="email" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>
             <input type="submit" value="Login">
         </form>
@@ -18,3 +30,4 @@
     </div>
 </body>
 </html>
+

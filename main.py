@@ -34,7 +34,7 @@ c.execute('''
 ''')
 c.execute('''
     CREATE TABLE IF NOT EXISTS users
-    (id INTEGER PRIMARY KEY, username TEXT UNIQUE, password_hash TEXT, email TEXT UNIQUE)
+    (id INTEGER PRIMARY KEY, email TEXT UNIQUE, password_hash TEXT)
 ''')
 c.execute('''
     CREATE TABLE IF NOT EXISTS user_preferences
@@ -45,13 +45,13 @@ conn.commit()
 
 # User model for Flask-Login
 class User(UserMixin):
-    def __init__(self, id, username):
+    def __init__(self, id, email):
         self.id = id
-        self.username = username
+        self.email = email
 
 @login_manager.user_loader
 def load_user(user_id):
-    c.execute("SELECT id, username FROM users WHERE id = ?", (user_id,))
+    c.execute("SELECT id, email FROM users WHERE id = ?", (user_id,))
     user = c.fetchone()
     if user:
         return User(user[0], user[1])
@@ -100,16 +100,16 @@ def extract_thumbnail_link(api_url):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
+        email = request.form['email']
         password = request.form['password']
-        c.execute("SELECT id, username, password_hash FROM users WHERE username = ?", (username,))
+        c.execute("SELECT id, email, password_hash FROM users WHERE email = ?", (email,))
         user = c.fetchone()
         if user and check_password_hash(user[2], password):
             user_obj = User(user[0], user[1])
             login_user(user_obj)
             return redirect(url_for('search_wikipedia'))
         else:
-            flash('Invalid username or password')
+            flash('Invalid email or password')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -121,16 +121,15 @@ def logout():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
         email = request.form['email']
+        password = request.form['password']
         password_hash = generate_password_hash(password)
         try:
-            c.execute("INSERT INTO users (username, password_hash, email) VALUES (?, ?, ?)", (username, password_hash, email))
+            c.execute("INSERT INTO users (email, password_hash) VALUES (?, ?)", (email, password_hash))
             conn.commit()
             return redirect(url_for('login'))
         except sqlite3.IntegrityError:
-            flash('Username or email already exists')
+            flash('Email already exists')
     return render_template('register.html')
 
 @app.route('/user/settings', methods=['GET', 'POST'])

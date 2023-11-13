@@ -5,6 +5,30 @@
     box-sizing: border-box;
 }
 
+.btn, 
+input[type="submit"], 
+button {
+    max-width: 300px; /* Set a maximum width for buttons */
+    width: 100%; /* Buttons take up 100% of the container width up to the max-width */
+    margin: 0 auto; /* Center the button */
+    display: block; /* Makes the margin auto effective for centering */
+
+
+    /* ... (other button styles) ... */
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+    max-width: 300px; /* Set a maximum width for input fields */
+    width: 100%; /* Input fields take up 100% of the container width up to the max-width */
+    margin: 10px auto; /* Center the input field and keep margin */
+    display: block; /* Makes the margin auto effective for centering */
+
+    /* ... (other input styles) ... */
+}
+
+
 body {
     font-family: 'Arial', sans-serif;
     background-color: #f4f4f4;
@@ -123,4 +147,42 @@ button:hover {
         padding: 20px;
         width: 100%;
     }
+}
+/* styles.css */
+
+/* Style the topbar */
+.topbar {
+    display: flex;
+    justify-content: space-between; /* Align items on the main axis */
+    align-items: center; /* Align items on the cross axis */
+    overflow: hidden;
+    background-color: #333;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    padding: 0 10px; /* Add some padding on the sides */
+}
+
+.topbar a {
+    color: #f2f2f2;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-size: 17px;
+}
+
+/* Change the color of links on hover */
+.topbar a:hover {
+    background-color: #ddd; /* Background color on hover */
+    color: black;
+}
+
+.topbar .right {
+    display: flex;
+}
+
+/* Add a color to the active/current link */
+.topbar a.active {
+    background-color: #04AA6D; /* Active link background color */
+    color: white;
 }

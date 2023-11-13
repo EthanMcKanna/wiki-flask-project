@@ -2,14 +2,27 @@
 <html>
 <head>
     <title>Search Results</title>
-    <link rel="stylesheet" type="text/css" href="static/styles.css">
-    <link rel="icon" type="image/png" href="static/images/SiteFavicon.png">
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+    <link rel="icon" type="image/png" href="/static/images/SiteFavicon.png">
 </head>
 <body>
-    <div>
+    <div class="topbar">
+        <a href="/">Home</a>
+        {% if current_user.is_authenticated %}
+            <div class="right">
+                <a href="/user/settings">Settings</a>
+                <a href="/logout">Logout</a>
+            </div>
+        {% else %}
+            <a href="/login">Login</a>
+            <a href="/register">Register</a>
+        {% endif %}
+    </div>
+
+    <div style="padding-top:60px; margin:20px;">
         <h1>Search Results for {{ query }}</h1>
         {% if image_url and image_url != 'https://via.placeholder.com/150' %}
-            <img src="{{ image_url }}" alt="Image">
+        <img src="{{ image_url }}" alt="Image">
         {% endif %}
 
         {% if summary_complexity == "simple" %}
@@ -34,8 +47,6 @@
                 <p><a href="{{ url_for('search_wikipedia', query=article) }}">{{ article }}</a></p>
             {% endfor %}
         {% endif %}
-
-        <a href="/">New Search</a> | <a href="/logout">Logout</a>
     </div>
 </body>
 </html>

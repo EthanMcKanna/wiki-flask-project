@@ -2,21 +2,34 @@
 <html>
 <head>
     <title>Wiki Summary App</title>
-    <link rel="stylesheet" type="text/css" href="static/styles.css">
-    <link rel="icon" type="image/png" href="static/images/SiteFavicon.png">
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+    <link rel="icon" type="image/png" href="/static/images/SiteFavicon.png">
 </head>
 <body>
-    <div>
+    <div class="topbar">
+        <a href="/">Home</a>
+        {% if current_user.is_authenticated %}
+            <div class="right">
+                <a href="/user/settings">Settings</a>
+                <a href="/logout">Logout</a>
+            </div>
+        {% else %}
+            <a href="/login">Login</a>
+            <a href="/register">Register</a>
+        {% endif %}
+    </div>
+
+    <div style="padding-top:60px; margin:20px;">
         <h1>Welcome to the Wiki Summary App</h1>
         {% if current_user.is_authenticated %}
             <form method="POST" action="/">
                 <input type="text" name="query" placeholder="Enter your search query" required>
                 <input type="submit" value="Search">
             </form>
-            <a href="/user/settings" class="button">Edit Settings</a> | <a href="/logout" class="button">Logout</a>
         {% else %}
             <p>Please <a href="/login" class="button">login</a> or <a href="/register" class="button">register</a> to search.</p>
         {% endif %}
     </div>
 </body>
 </html>
+

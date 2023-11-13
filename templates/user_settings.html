@@ -2,21 +2,35 @@
 <html>
 <head>
     <title>User Settings</title>
-    <link rel="stylesheet" type="text/css" href="static/styles.css">
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
     <link rel="icon" type="image/png" href="static/images/SiteFavicon.png">
 </head>
 <body>
-    <div>
+    <div class="topbar">
+        <a href="/">Home</a>
+        {% if current_user.is_authenticated %}
+            <div class="right">
+                <a href="/user/settings">Settings</a>
+                <a href="/logout">Logout</a>
+            </div>
+        {% else %}
+            <a href="/login">Login</a>
+            <a href="/register">Register</a>
+        {% endif %}
+    </div>
+
+    <div style="padding-top:60px; margin:20px;">
         <h1>User Settings</h1>
         <form method="POST" action="/user/settings">
-            <label for="summary_complexity">Summary Complexity:</label>
-            <select name="summary_complexity" id="summary_complexity">
-                <option value="simple">Simple</option>
-                <option value="detailed">Detailed</option>
-            </select>
-            <input type="submit" value="Save Settings">
+                <label for="summary_complexity">Summary Complexity:</label>
+                <select name="summary_complexity" id="summary_complexity">
+                    <option value="simple">Simple</option>
+                    <option value="detailed">Detailed</option>
+                </select>
+            <div>
+                <input type="submit" value="Save Settings">
+            </div>
         </form>
-        <a href="/" class="button">Home</a> | <a href="/logout" class="button">Logout</a>
     </div>
 </body>
 </html>
