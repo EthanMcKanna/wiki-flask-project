@@ -15,7 +15,8 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key'  # Replace with a real secret key
+FLASK_KEY = os.getenv('FLASK_KEY')
+app.secret_key = FLASK_KEY
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -37,8 +38,9 @@ c.execute('''
 ''')
 c.execute('''
     CREATE TABLE IF NOT EXISTS user_preferences
-    (user_id INTEGER, summary_length INTEGER, summary_complexity TEXT, FOREIGN KEY(user_id) REFERENCES users(id))
+    (user_id INTEGER PRIMARY KEY, summary_complexity TEXT, custom_summary TEXT, FOREIGN KEY(user_id) REFERENCES users(id))
 ''')
+
 conn.commit()
 
 # User model for Flask-Login
@@ -55,7 +57,7 @@ def load_user(user_id):
         return User(user[0], user[1])
     return None
 
-def generate_summary(query, text, user_preferences):
+def generate_summary(query, text, user_preferences=None):
     system_message = "You are wikiGPT and your goal is to provide simple, coherent, and easily understandable summaries of the given wikipedia excerpts for a user query. You are to provide two summaries; a more advanced summary and a very basic explanation easily understandable by anyone of any age using more simple vocabulary. Use JSON to store the advanced and basic summaries in the following format: { 'advanced': '...', 'basic': '...' }"
     user_message = f"Here is a wikipedia excerpt for the query {query}: {text}"
 
@@ -137,23 +139,51 @@ def user_settings():
     if request.method == 'POST':
         summary_complexity = request.form['summary_complexity']
         user_id = current_user.get_id()
-        # Update user preferences in the database
-        c.execute("UPDATE user_preferences SET summary_complexity = ? WHERE user_id = ?", (summary_complexity, user_id))
-        conn.commit()
-        flash('Settings updated successfully!')
+
+        # Check if user preferences already exist
+        c.execute("SELECT 1 FROM user_preferences WHERE user_id = ?", (user_id,))
+        exists = c.fetchone()
+
+        try:
+            if exists:
+                # Update existing record
+                c.execute("UPDATE user_preferences SET summary_complexity = ? WHERE user_id = ?", (summary_complexity, user_id))
+            else:
+                # Insert new record
+                c.execute("INSERT INTO user_preferences (user_id, summary_complexity) VALUES (?, ?)", (user_id, summary_complexity))
+            conn.commit()
+            flash('Settings updated successfully!')
+        except sqlite3.Error as e:
+            flash(f"An error occurred: {e}")
+            print(f"An error occurred: {e}")
+
         return redirect(url_for('user_settings'))
 
     return render_template('user_settings.html')
 
 
 
-@app.route('/', methods=['GET', 'POST'])
-@app.route('/', methods=['GET', 'POST'])
+
 @app.route('/', methods=['GET', 'POST'])
 def search_wikipedia():
-    related_articles = []  # Initialize related_articles as an empty list
-    if request.method == 'POST':
-        query = request.form['query']
+    related_articles = []
+    query = request.args.get('query') if request.method == 'GET' else request.form.get('query')
+
+    user_id = current_user.get_id() if current_user.is_authenticated else None
+    print(user_id)
+    c.execute("SELECT summary_complexity FROM user_preferences WHERE user_id=?", (user_id,))
+    user_preferences = c.fetchall()
+    
+    if user_preferences:
+        # Extract the first element of the first tuple
+        summary_complexity = user_preferences[0][0]
+        print("User Preference:", summary_complexity)
+    else:
+        summary_complexity = None  # or a default value
+        print("No preference set for user.")
+
+
+    if query:
         query = query.strip().lower()
 
         # Check if the result is in the database
@@ -163,6 +193,8 @@ def search_wikipedia():
         if row is not None:
             wikipedia_summary, ai_summaries_json, image_url = row
             ai_summaries = json.loads(ai_summaries_json)
+            related_articles = get_related_articles(query)
+
         else:
             # If the result is not in the database, fetch it and store it
             try:
@@ -170,19 +202,12 @@ def search_wikipedia():
                 if results:
                     top_result = results[0]
                     wikipedia_summary = wikipedia.summary(top_result, auto_suggest=False)
-                    user_id = current_user.get_id() if current_user.is_authenticated else None
-                    c.execute("SELECT summary_length, summary_complexity FROM user_preferences WHERE user_id=?", (user_id,))
-                    user_preferences = c.fetchone() or (None, None)
-                    ai_summaries = generate_summary(top_result, wikipedia_summary, user_preferences)
+                    ai_summaries = generate_summary(top_result, wikipedia_summary)
                     ai_summaries_json = json.dumps(ai_summaries)
 
                     image_link = f"https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&prop=pageimages|pageterms&piprop=thumbnail&pithumbsize=100&pilicense=any&titles={top_result}"
                     image_url = extract_thumbnail_link(image_link)
 
-                    related_articles = get_related_articles(top_result)
-
-                    if image_url is None:
-                        image_url = "https://via.placeholder.com/150"
 
                     c.execute("INSERT OR REPLACE INTO api_cache VALUES (?, ?, ?, ?)", (query, wikipedia_summary, ai_summaries_json, image_url))
                     conn.commit()
@@ -195,7 +220,7 @@ def search_wikipedia():
             except wikipedia.exceptions.PageError:
                 return "No page matches the query."
 
-        return render_template('results.html', summary=wikipedia_summary, ai_summary=ai_summaries, image_url=image_url, query=query.title(), related_articles=related_articles)
+        return render_template('results.html', summary=wikipedia_summary, ai_summary=ai_summaries, image_url=image_url, query=query.title(), related_articles=related_articles, summary_complexity=summary_complexity)
     return render_template('index.html')
 
 
