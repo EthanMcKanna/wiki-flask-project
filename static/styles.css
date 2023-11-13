@@ -34,10 +34,11 @@ body {
     background-color: #f4f4f4;
     line-height: 1.6;
     padding: 10px;
-}
+    display: flex; /* Enable flexbox */
+    flex-direction: column; /* Stack children vertically */
+    align-items: center; /* Center children horizontally */
+    height: 100vh; /* Full height of the viewport */
 
-/* Container */
-.container {
     width: 90%;
     max-width: 800px;
     margin: auto;

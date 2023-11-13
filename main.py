@@ -30,7 +30,7 @@ c = conn.cursor()
 # Create tables
 c.execute('''
     CREATE TABLE IF NOT EXISTS api_cache
-    (query TEXT PRIMARY KEY, wikipedia_summary TEXT, related_topics TEXT, ai_summaries TEXT, image_url TEXT)
+    (article_title TEXT PRIMARY KEY, wikipedia_summary TEXT, related_topics TEXT, ai_summaries TEXT, image_url TEXT, queries TEXT)
 ''')
 c.execute('''
     CREATE TABLE IF NOT EXISTS users
@@ -160,9 +160,6 @@ def user_settings():
 
     return render_template('user_settings.html')
 
-
-
-
 @app.route('/', methods=['GET', 'POST'])
 def search_wikipedia():
     related_articles = []
@@ -181,57 +178,44 @@ def search_wikipedia():
         summary_complexity = None  # or a default value
         print("No preference set for user.")
 
-
     if query:
         query = query.strip().lower()
+        results = wikipedia.search(query)
+        if results:
+            top_result = results[0]
 
-        # Check if the result is in the database
-        c.execute("SELECT wikipedia_summary, ai_summaries, image_url, related_topics FROM api_cache WHERE query=?", (query,))
-        row = c.fetchone()
+            c.execute("SELECT wikipedia_summary, ai_summaries, image_url, related_topics, queries FROM api_cache WHERE article_title=?", (top_result,))
+            row = c.fetchone()
 
-        if row is not None:
-            wikipedia_summary, ai_summaries_json, image_url, related_articles_string = row
-            ai_summaries = json.loads(ai_summaries_json)
-            if related_articles_string:
-                related_articles = related_articles_string.split(", ")
-            else:
-                related_articles = get_related_articles(query)
-
-        else:
-            # If the result is not in the database, fetch it and store it
-            try:
-                results = wikipedia.search(query)
-                if results:
-                    top_result = results[0]
-                    wikipedia_summary = wikipedia.summary(top_result, auto_suggest=False)
-                    ai_summaries = generate_summary(top_result, wikipedia_summary)
-                    ai_summaries_json = json.dumps(ai_summaries)
-
-                    related_articles = get_related_articles(top_result)
-                    related_articles_string = ", ".join(related_articles)
-
-
-                    image_link = f"https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&prop=pageimages|pageterms&piprop=thumbnail&pithumbsize=100&pilicense=any&titles={top_result}"
-                    image_url = extract_thumbnail_link(image_link)
-
-
-                    c.execute("INSERT OR REPLACE INTO api_cache VALUES (?, ?, ?, ?, ?)", (query, wikipedia_summary, related_articles_string, ai_summaries_json, image_url))
-                    conn.commit()
-
+            if row:
+                wikipedia_summary, ai_summaries_json, image_url, related_articles_string, cached_queries = row
+                ai_summaries = json.loads(ai_summaries_json)
+                if related_articles_string:
+                    related_articles = related_articles_string.split(", ")
                 else:
-                    return "No results found for your query."
-            except wikipedia.exceptions.DisambiguationError as e:
-                # Handle DisambiguationError...
-                pass
-            except wikipedia.exceptions.PageError:
-                return "No page matches the query."
+                    related_articles = get_related_articles(top_result)
 
-        return render_template('results.html', summary=wikipedia_summary, ai_summary=ai_summaries, image_url=image_url, query=query.title(), related_articles=related_articles, summary_complexity=summary_complexity)
+                updated_queries = cached_queries + ", " + query if cached_queries else query
+                c.execute("UPDATE api_cache SET queries=? WHERE article_title=?", (updated_queries, top_result))
+            else:
+                wikipedia_summary = wikipedia.summary(top_result, auto_suggest=False)
+                ai_summaries = generate_summary(top_result, wikipedia_summary)
+                ai_summaries_json = json.dumps(ai_summaries)
+
+                related_articles = get_related_articles(top_result)
+                related_articles_string = ", ".join(related_articles)
+
+                image_link = f"https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&prop=pageimages|pageterms&piprop=thumbnail&pithumbsize=100&pilicense=any&titles={top_result}"
+                image_url = extract_thumbnail_link(image_link)
+
+                c.execute("INSERT OR REPLACE INTO api_cache VALUES (?, ?, ?, ?, ?, ?)", (top_result, wikipedia_summary, related_articles_string, ai_summaries_json, image_url, query))
+            conn.commit()
+        else:
+            flash("No results found for your query.")
+            return render_template('index.html')
+
+        return render_template('results.html', summary=wikipedia_summary, ai_summary=ai_summaries, image_url=image_url, query=top_result, related_articles=related_articles, summary_complexity=summary_complexity)
     return render_template('index.html')
-
-
 
 if __name__ == "__main__":
     app.run(debug=True)
-    # Close the database connection
-    conn.close()
