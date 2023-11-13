@@ -30,7 +30,7 @@ c = conn.cursor()
 # Create tables
 c.execute('''
     CREATE TABLE IF NOT EXISTS api_cache
-    (query TEXT PRIMARY KEY, wikipedia_summary TEXT, ai_summaries TEXT, image_url TEXT)
+    (query TEXT PRIMARY KEY, wikipedia_summary TEXT, related_topics TEXT, ai_summaries TEXT, image_url TEXT)
 ''')
 c.execute('''
     CREATE TABLE IF NOT EXISTS users
@@ -187,13 +187,16 @@ def search_wikipedia():
         query = query.strip().lower()
 
         # Check if the result is in the database
-        c.execute("SELECT wikipedia_summary, ai_summaries, image_url FROM api_cache WHERE query=?", (query,))
+        c.execute("SELECT wikipedia_summary, ai_summaries, image_url, related_topics FROM api_cache WHERE query=?", (query,))
         row = c.fetchone()
 
         if row is not None:
-            wikipedia_summary, ai_summaries_json, image_url = row
+            wikipedia_summary, ai_summaries_json, image_url, related_articles_string = row
             ai_summaries = json.loads(ai_summaries_json)
-            related_articles = get_related_articles(query)
+            if related_articles_string:
+                related_articles = related_articles_string.split(", ")
+            else:
+                related_articles = get_related_articles(query)
 
         else:
             # If the result is not in the database, fetch it and store it
@@ -205,11 +208,15 @@ def search_wikipedia():
                     ai_summaries = generate_summary(top_result, wikipedia_summary)
                     ai_summaries_json = json.dumps(ai_summaries)
 
+                    related_articles = get_related_articles(top_result)
+                    related_articles_string = ", ".join(related_articles)
+
+
                     image_link = f"https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&prop=pageimages|pageterms&piprop=thumbnail&pithumbsize=100&pilicense=any&titles={top_result}"
                     image_url = extract_thumbnail_link(image_link)
 
 
-                    c.execute("INSERT OR REPLACE INTO api_cache VALUES (?, ?, ?, ?)", (query, wikipedia_summary, ai_summaries_json, image_url))
+                    c.execute("INSERT OR REPLACE INTO api_cache VALUES (?, ?, ?, ?, ?)", (query, wikipedia_summary, related_articles_string, ai_summaries_json, image_url))
                     conn.commit()
 
                 else:
