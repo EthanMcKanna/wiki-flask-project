@@ -187,3 +187,24 @@ button:hover {
     background-color: #04AA6D; /* Active link background color */
     color: white;
 }
+
+#suggestionBox {
+    position: absolute;
+    border: 1px solid #d4d4d4;
+    border-bottom: none;
+    border-top: none;
+    z-index: 99;
+    background-color: white;
+    width: -webkit-fill-available;
+}
+
+#suggestionBox div {
+    padding: 10px;
+    cursor: pointer;
+    background-color: #fff;
+    border-bottom: 1px solid #d4d4d4;
+}
+
+#suggestionBox div:hover {
+    background-color: #e9e9e9;
+}

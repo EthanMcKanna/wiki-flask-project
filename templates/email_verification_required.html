@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Verification Required</title>
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+    <link rel="icon" type="image/png" href="/static/images/SiteFavicon.png">
+</head>
+<body>
+    <div class="container">
+        <h1>Email Verification Required</h1>
+        <p>Before you can send queries, you need to verify your email address.</p>
+        <p>Please check your inbox for the verification email and click on the link provided.</p>
+        <p>If you can't find the email, check your spam folder or <a href="{{ url_for('resend_verification_email') }}">click here</a> to resend the verification email.</p>
+    </div>
+</body>
+</html>

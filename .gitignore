@@ -1,2 +1,3 @@
 .env
 wiki_cache.db
+config.cfg

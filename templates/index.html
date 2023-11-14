@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Wiki Summary App</title>
-    <link rel="stylesheet" type="text/css" href="/static/styles.css">
-    <link rel="icon" type="image/png" href="/static/images/SiteFavicon.png">
+    <title>YouSummarize</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/SiteFavicon.png') }}">
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
     <div class="topbar">
@@ -20,16 +22,54 @@
     </div>
 
     <div style="padding-top:60px; margin:20px;">
-        <h1>Welcome to the Wiki Summary App</h1>
+        <h1>Welcome to YouSummarize</h1>
         {% if current_user.is_authenticated %}
-            <form method="POST" action="/">
-                <input type="text" name="query" placeholder="Enter your search query" required>
+            <form method="POST" action="/" id="searchForm">
+                <input type="text" name="query" id="searchInput" placeholder="Enter your search query" required>
+                <div id="suggestionBox"></div>
                 <input type="submit" value="Search">
             </form>
         {% else %}
             <p>Please <a href="/login" class="button">login</a> or <a href="/register" class="button">register</a> to search.</p>
         {% endif %}
     </div>
+
+    <script>
+        function debounce(func, timeout = 300){
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => { func.apply(this, args); }, timeout);
+            };
+        }
+
+        function fetchSuggestions() {
+            var query = $('#searchInput').val();
+            if (query.length > 2) {
+                $.ajax({
+                    url: '/suggest',
+                    data: {'query': query},
+                    success: function(data) {
+                        $('#suggestionBox').empty();
+                        $.each(data, function(i, suggestion) {
+                            $('#suggestionBox').append('<div onclick="selectSuggestion(\'' + suggestion + '\')">' + suggestion + '</div>');
+                        });
+                    }
+                });
+            } else {
+                $('#suggestionBox').empty();
+            }
+        }
+
+        function selectSuggestion(value) {
+            $('#searchInput').val(value);
+            $('#suggestionBox').empty();
+            $('#searchForm').submit("search"); 
+        }
+
+        $(document).ready(function() {
+            $('#searchInput').on('input', debounce(fetchSuggestions));
+        });
+    </script>
 </body>
 </html>
-
