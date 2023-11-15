@@ -11,6 +11,7 @@ import os
 from dotenv import load_dotenv
 from itsdangerous import URLSafeTimedSerializer
 from flask_mail import Mail, Message
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -48,7 +49,10 @@ c.execute('''
     CREATE TABLE IF NOT EXISTS user_preferences
     (user_id INTEGER PRIMARY KEY, summary_complexity TEXT, custom_summary TEXT, FOREIGN KEY(user_id) REFERENCES users(id))
 ''')
-
+c.execute('''
+    CREATE TABLE IF NOT EXISTS search_history
+    (id INTEGER PRIMARY KEY, user_id INTEGER, query TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(id))
+''')
 conn.commit()
 
 # User model for Flask-Login
@@ -57,6 +61,23 @@ class User(UserMixin):
         self.id = id
         self.email = email
         self.confirmed = confirmed
+
+
+def relative_date(date_str):
+    date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+    delta = datetime.utcnow() - date
+    if delta.days == 0:
+        return 'Today'
+    elif delta.days == 1:
+        return 'Yesterday'
+    elif delta.days == -1:
+        return 'Tomorrow'
+    elif delta.days < 0:
+        return f'In {-delta.days} days'
+    else:
+        return f'{delta.days} days ago'     
+
+app.jinja_env.filters['relative_date'] = relative_date
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -282,6 +303,15 @@ def user_settings():
 
     return render_template('user_settings.html')
 
+@app.route('/search_history')
+@login_required
+def search_history():
+    page = request.args.get('page', 1, type=int)
+    offset = (page - 1) * 50
+    c.execute("SELECT query, timestamp FROM search_history WHERE user_id = ? ORDER BY timestamp DESC LIMIT 50 OFFSET ?", (current_user.get_id(), offset))
+    history = c.fetchall()
+    return render_template('search_history.html', history=history, page=page)
+
 @app.route('/search', methods=['GET', 'POST'])
 @login_required
 def search_wikipedia():
@@ -292,6 +322,10 @@ def search_wikipedia():
     query = request.args.get('query') if request.method == 'GET' else request.form.get('query')
     if query:
         query = query.strip().lower()
+
+        c.execute("INSERT INTO search_history (user_id, query) VALUES (?, ?)", (current_user.get_id(), query))
+        conn.commit()
+
         return process_query(query)
     return render_template('search.html')
 
