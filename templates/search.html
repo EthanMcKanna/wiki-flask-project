@@ -4,7 +4,6 @@
     <title>YouSummarize</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/SiteFavicon.png') }}">
-    <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
@@ -24,7 +23,7 @@
     <div style="padding-top:60px; margin:20px;">
         <h1>Welcome to YouSummarize</h1>
         {% if current_user.is_authenticated %}
-            <form method="POST" action="/" id="searchForm">
+            <form method="POST" action="/search" id="searchForm">
                 <input type="text" name="query" id="searchInput" placeholder="Enter your search query" required>
                 <div id="suggestionBox"></div>
                 <input type="submit" value="Search">

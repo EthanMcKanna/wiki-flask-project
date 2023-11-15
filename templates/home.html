@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouSummarize Home</title>
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+    <link rel="icon" type="image/png" href="/static/images/SiteFavicon.png">
+</head>
+<body>
+    <div class="topbar">
+        <a href="/">Home</a>
+        <a href="/search">Search</a>
+        {% if current_user.is_authenticated %}
+            <div class="right">
+                <a href="/user/settings">Settings</a>
+                <a href="/logout">Logout</a>
+            </div>
+        {% else %}
+            <a href="/login">Login</a>
+            <a href="/register">Register</a>
+        {% endif %}
+    </div>
+    <div class="main-content">
+        <h1>Welcome to YouSummarize!</h1>
+        <p>Your go-to tool for summarizing and exploring Wikipedia articles.</p>
+        <div>
+            {% if current_user.is_authenticated %}
+                <a href="/search" class="button">Start Searching</a>
+            {% else %}
+            <a href="/login">Login</a>
+            <a href="/register">Register</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="footer">
+        <!-- Footer content: Additional links, contact information, etc. -->
+    </div>
+</body>
+</html>

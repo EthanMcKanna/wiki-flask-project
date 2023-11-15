@@ -84,7 +84,6 @@ def generate_summary(query, text, user_preferences=None):
         presence_penalty=0
     )
 
-    print("DEBUG")
     print(response.choices[0].message.content)
     ai_summaries = json.loads(response.choices[0].message.content)
     return ai_summaries
@@ -115,7 +114,7 @@ def suggest():
     suggestions = []
     if query:
         try:
-            suggestions = wikipedia.search(query, results=5)  # Adjust the number of results as needed
+            suggestions = wikipedia.search(query, results=5)
         except Exception as e:
             print("Error occurred in autosuggest:", traceback.format_exc())
     return jsonify(suggestions)
@@ -176,7 +175,7 @@ def confirm_email(token):
     flash('Email confirmed. Please login.')
     return redirect(url_for('login'))
 
-@app.route('/resend_verification_email')
+@app.route('/resend_verificaxtion_email')
 @login_required
 def resend_verification_email():
     # Generate a new confirmation token
@@ -195,6 +194,65 @@ def resend_verification_email():
 @login_required
 def email_verification_required():
     return render_template('email_verification_required.html')
+
+
+
+def generate_reset_token(email):
+    return s.dumps(email, salt='password-reset-salt')
+
+def verify_reset_token(token):
+    try:
+        email = s.loads(token, salt='password-reset-salt', max_age=3600)
+        return email
+    except:
+        return None
+
+
+def send_password_reset_email(user_email):
+    token = generate_reset_token(user_email)
+    msg = Message('Reset Your Password', sender=("YouSummarize", "YouSummarize@gmail.com"), recipients=[user_email])
+    reset_link = url_for('reset_password', token=token, _external=True)
+    msg.body = f'Please click on the link to reset your password: {reset_link}'
+    mail.send(msg)
+
+
+
+@app.route('/reset_password_request', methods=['GET', 'POST'])
+def reset_password_request():
+    if request.method == 'POST':
+        email = request.form['email']
+        c.execute("SELECT id FROM users WHERE email = ?", (email,))
+        user = c.fetchone()
+        if user:
+            send_password_reset_email(email)
+            flash('An email with instructions to reset your password has been sent.')
+        else:
+            flash('Email not found')
+        return redirect(url_for('login'))
+    return render_template('reset_password_request.html')
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if request.method == 'POST':
+        email = verify_reset_token(token)
+        if email is None:
+            flash('The password reset link is invalid or has expired.')
+            return redirect(url_for('login'))
+        
+        password = request.form['password']
+        password_hash = generate_password_hash(password)
+
+        # Update the user's password
+        c.execute("UPDATE users SET password_hash = ? WHERE email = ?", (password_hash, email))
+        conn.commit()
+        flash('Your password has been reset.')
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', token=token)
+
+
+
+
 
 @app.route('/user/settings', methods=['GET', 'POST'])
 @login_required
@@ -224,69 +282,84 @@ def user_settings():
 
     return render_template('user_settings.html')
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/search', methods=['GET', 'POST'])
 @login_required
 def search_wikipedia():
     if not current_user.confirmed:
         flash('Please confirm your email before sending queries.')
         return redirect(url_for('email_verification_required'))
-    related_articles = []
-    top_result = None
-    query = request.args.get('query') if request.method == 'GET' else request.form.get('query')
 
+    query = request.args.get('query') if request.method == 'GET' else request.form.get('query')
+    if query:
+        query = query.strip().lower()
+        return process_query(query)
+    return render_template('search.html')
+
+def process_query(query):
+    results = wikipedia.search(query)
+    if not results:
+        flash("No results found for your query.")
+        return render_template('search.html')
+
+    top_result = results[0]
+    try:
+        return get_or_create_article_data(top_result, query)
+    except wikipedia.exceptions.DisambiguationError as e:
+        # Choose first option from disambiguation or implement a better selection method
+        top_result = e.options[0]
+        return get_or_create_article_data(top_result, query)
+
+def get_or_create_article_data(article_title, original_query):
+    c.execute("SELECT wikipedia_summary, ai_summaries, image_url, related_topics, queries FROM api_cache WHERE article_title=?", (article_title,))
+    row = c.fetchone()
+
+    if row:
+        return render_cached_article_data(row, article_title)
+    else:
+        return create_and_cache_article_data(article_title, original_query)
+
+def render_cached_article_data(row, article_title):
+    wikipedia_summary, ai_summaries_json, image_url, related_articles_string, cached_queries = row
+    ai_summaries = json.loads(ai_summaries_json)
+    related_articles = related_articles_string.split(", ")
+
+    updated_queries = cached_queries + ", " + article_title if cached_queries else article_title
+    c.execute("UPDATE api_cache SET queries=? WHERE article_title=?", (updated_queries, article_title))
+    conn.commit()
+
+    return render_article_data(wikipedia_summary, ai_summaries, image_url, article_title, related_articles)
+
+def create_and_cache_article_data(article_title, original_query):
+    wikipedia_summary = wikipedia.summary(article_title, auto_suggest=False)
+    ai_summaries = generate_summary(article_title, wikipedia_summary)
+    ai_summaries_json = json.dumps(ai_summaries)
+
+    related_articles = get_related_articles(article_title)
+    related_articles_string = ", ".join(related_articles)
+
+    image_link = f"https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&prop=pageimages|pageterms&piprop=thumbnail&pithumbsize=100&pilicense=any&titles={article_title}"
+    image_url = extract_thumbnail_link(image_link)
+
+    c.execute("INSERT INTO api_cache (article_title, wikipedia_summary, related_topics, ai_summaries, image_url, queries) VALUES (?, ?, ?, ?, ?, ?)", (article_title, wikipedia_summary, related_articles_string, ai_summaries_json, image_url, original_query))
+    conn.commit()
+
+    return render_article_data(wikipedia_summary, ai_summaries, image_url, article_title, related_articles)
+
+def render_article_data(wikipedia_summary, ai_summaries, image_url, query, related_articles):
     user_id = current_user.get_id() if current_user.is_authenticated else None
     c.execute("SELECT summary_complexity FROM user_preferences WHERE user_id=?", (user_id,))
     user_preferences = c.fetchall()
     
-    if user_preferences:
-        # Extract the first element of the first tuple
-        summary_complexity = user_preferences[0][0]
-    else:
-        summary_complexity = None  # or a default value
+    summary_complexity = user_preferences[0][0] if user_preferences else None
 
-    if query:
-        query = query.strip().lower()
-        results = wikipedia.search(query)
-        if results:
-            top_result = results[0]
+    return render_template('results.html', summary=wikipedia_summary, ai_summary=ai_summaries, image_url=image_url, query=query, related_articles=related_articles, summary_complexity=summary_complexity)
 
-            c.execute("SELECT wikipedia_summary, ai_summaries, image_url, related_topics, queries FROM api_cache WHERE article_title=?", (top_result,))
-            row = c.fetchone()
 
-            if row:
-                wikipedia_summary, ai_summaries_json, image_url, related_articles_string, cached_queries = row
-                ai_summaries = json.loads(ai_summaries_json)
-                if related_articles_string:
-                    related_articles = related_articles_string.split(", ")
-                else:
-                    related_articles = get_related_articles(top_result)
+# home page
+@app.route('/')
+def home():
+    return render_template('home.html')
 
-                updated_queries = cached_queries + ", " + query if cached_queries else query
-                c.execute("UPDATE api_cache SET queries=? WHERE article_title=?", (updated_queries, top_result))
-            else:
-                try:
-                    wikipedia_summary = wikipedia.summary(top_result, auto_suggest=False)
-                except wikipedia.exceptions.DisambiguationError as e:
-                    top_result = e.options[0]
-                    wikipedia_summary = wikipedia.summary(top_result, auto_suggest=False)
-                
-                ai_summaries = generate_summary(top_result, wikipedia_summary)
-                ai_summaries_json = json.dumps(ai_summaries)
-
-                related_articles = get_related_articles(top_result)
-                related_articles_string = ", ".join(related_articles)
-
-                image_link = f"https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&prop=pageimages|pageterms&piprop=thumbnail&pithumbsize=100&pilicense=any&titles={top_result}"
-                image_url = extract_thumbnail_link(image_link)
-
-                c.execute("INSERT OR REPLACE INTO api_cache VALUES (?, ?, ?, ?, ?, ?)", (top_result, wikipedia_summary, related_articles_string, ai_summaries_json, image_url, query))
-            conn.commit()
-        else:
-            flash("No results found for your query.")
-            return render_template('index.html')
-
-        return render_template('results.html', summary=wikipedia_summary, ai_summary=ai_summaries, image_url=image_url, query=top_result, related_articles=related_articles, summary_complexity=summary_complexity)
-    return render_template('index.html')
 
 if __name__ == "__main__":
     app.run(debug=True)

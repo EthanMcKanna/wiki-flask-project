@@ -18,16 +18,37 @@
             <a href="/register">Register</a>
         {% endif %}
     </div>
-
-    <div style="padding-top:60px; margin:20px;">
+    <div style="padding-top:100px; margin:20px;">
         <h1>Login</h1>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flashes">
+                    {% for message in messages %}
+                        <div class="alert">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
         <form method="POST" action="/login">
             <input type="email" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>
             <input type="submit" value="Login">
         </form>
+        <div>
+            <a href="/reset_password_request">Forgot Password?</a>
+        </div>
+
         <a href="/register" class="button">Register</a>
+    </div>
     </div>
 </body>
 </html>
 
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script>
+$(document).ready(function() {
+    setTimeout(function() {
+        $(".flashes").fadeOut("slow");
+    }, 3000 );
+});
+</script>
